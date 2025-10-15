@@ -830,7 +830,7 @@ class PPOAgent(tf.keras.Model):
 
     def get_action_and_log_prob(self, mean):
 
-        std = tf.exp(self.log_std)
+        # std = tf.exp(self.log_std)
         # dist = tfd.MultivariateNormalDiag(loc=mean, scale_diag=std)
         dist = tfd.MultivariateNormalDiag(loc=mean, scale_diag=self.log_std)
 
@@ -839,6 +839,15 @@ class PPOAgent(tf.keras.Model):
         log_probs = dist.log_prob(action)
 
         return action, log_probs
+
+    def decay_action_std(self, decay_rate, min_std):
+        print("\nDECAYING ACTION STANDARD DEVIATION...")
+        current_std = self.log_std
+        new_std = current_std - decay_rate
+        new_std = tf.maximum(new_std, min_std)
+        print(f"Old std: {current_std.numpy()}, New std: {new_std.numpy()}")
+        self.log_std.assign(new_std)
+
 
     def compute_advantages(self, rewards, values, dones):
         advantages = []
@@ -997,6 +1006,9 @@ def train():
     scores = list()
     deviation_from_center = 0
     distance_covered = 0
+    action_std_decay_rate = 0.05
+    min_action_std = 0.05
+    action_std_decay_freq = 5e5
 
     np.random.seed(SEED)
     random.seed(SEED)
@@ -1072,6 +1084,9 @@ def train():
 
             timestep +=1
             current_ep_reward += reward
+
+            if timestep % action_std_decay_freq == 0:
+                agent.decay_action_std(action_std_decay_rate, min_action_std)
 
             if done:
                 episode += 1
