@@ -15,7 +15,6 @@ import pandas as pd
 import logging
 from datetime import datetime
 
-
 import tensorflow as tf
 import tensorflow_probability as tfp
 tfd = tfp.distributions
@@ -30,7 +29,6 @@ if gpu_available:
         print("GPU:", gpu)
 else:
     print("CUDA is NOT available. TensorFlow is using the CPU.")
-
 
 print()
 
@@ -90,7 +88,6 @@ class CarlaEnvironment():
         self.checkpoint_frequency = checkpoint_frequency
         self.route_waypoints = None
         self.town = town
-        
         # Objects to be kept alive
         self.camera_obj = None
         self.env_camera_obj = None
@@ -106,21 +103,18 @@ class CarlaEnvironment():
     def reset(self):
 
         try:
-            
             if len(self.actor_list) != 0 or len(self.sensor_list) != 0:
                 self.client.apply_batch([carla.command.DestroyActor(x) for x in self.sensor_list])
                 self.client.apply_batch([carla.command.DestroyActor(x) for x in self.actor_list])
                 self.sensor_list.clear()
                 self.actor_list.clear()
-            
             self.remove_sensors()
-
 
             # Blueprint of our main vehicle
             vehicle_bp = self.get_vehicle(CAR_NAME)
 
             if self.town == "Town07":
-                transform = self.map.get_spawn_points()[20] #Town7  is 38 
+                transform = self.map.get_spawn_points()[20] #Town7  is 38
                 self.total_distance = 750
             elif self.town == "Town02":
                 transform = self.map.get_spawn_points()[30] #Town2 is 30
@@ -128,12 +122,11 @@ class CarlaEnvironment():
                 #self.total_distance = 200
 
             else:
-                transform = self.map.get_spawn_points()[12] #40 nocd 
+                transform = self.map.get_spawn_points()[12] #40 nocd
                 self.total_distance = 500
 
             self.vehicle = self.world.try_spawn_actor(vehicle_bp, transform)
             self.actor_list.append(self.vehicle)
-
 
             # Camera Sensor
             self.camera_obj = CameraSensor(self.vehicle)
@@ -152,7 +145,6 @@ class CarlaEnvironment():
             self.collision_history = self.collision_obj.collision_data
             self.sensor_list.append(self.collision_obj.sensor)
 
-            
             self.timesteps = 0
             self.rotation = self.vehicle.get_transform().rotation.yaw
             self.previous_location = self.vehicle.get_location()
@@ -169,7 +161,6 @@ class CarlaEnvironment():
             self.angle = float(0.0)
             self.center_lane_deviation = 0.0
             self.distance_covered = 0.0
-
 
             if self.fresh_start:
                 #print("fresh start")
@@ -195,7 +186,6 @@ class CarlaEnvironment():
                             next_waypoint = current_waypoint.next(1.0)[-1]
                         else:
                             next_waypoint = current_waypoint.next(1.0)[0]
-                        
 
                     else:
                         if x < 300:
@@ -206,8 +196,6 @@ class CarlaEnvironment():
                     self.route_waypoints.append(next_waypoint)
                     current_waypoint = next_waypoint
 
- 
-            
             else:
                 #print("waypoint update")
                 # Teleport vehicle to last checkpoint
@@ -215,9 +203,7 @@ class CarlaEnvironment():
                 transform = waypoint.transform
                 self.vehicle.set_transform(transform)
                 self.current_waypoint_index = self.checkpoint_waypoint_index
-
-
-            self.navigation_obs = np.array([self.throttle, self.velocity, self.previous_steer, self.distance_from_center, self.angle])                        
+            self.navigation_obs = np.array([self.throttle, self.velocity, self.previous_steer, self.distance_from_center, self.angle])
             time.sleep(0.5)
             self.collision_history.clear()
 
@@ -241,23 +227,18 @@ class CarlaEnvironment():
             self.timesteps+=1
             self.fresh_start = False
 
- 
             velocity = self.vehicle.get_velocity()
             self.velocity = np.sqrt(velocity.x**2 + velocity.y**2 + velocity.z**2) * 3.6
-            
-     
             if self.continous_action_space:
                 steer = float(action_idx[0])
                 steer = max(min(steer, 1.0), -1.0)
                 throttle = float((action_idx[1] + 1.0)/2)
-                throttle = max(min(throttle, 1.0), 0.0) 
+                throttle = max(min(throttle, 1.0), 0.0)
                 #throttle = max(min(throttle, 1.0), 0.0)
                 self.vehicle.apply_control(carla.VehicleControl(steer=self.previous_steer*0.9 + steer*0.1, throttle=self.throttle*0.9 + throttle*0.1))
                 #print(f"Action vales : {self.previous_steer*0.9 + steer*0.1},{self.throttle*0.9 + throttle*0.1}")
                 self.previous_steer = steer
                 self.throttle = throttle
-
-            
 
             if self.vehicle.is_at_traffic_light():
                 traffic_light = self.vehicle.get_traffic_light()
@@ -296,7 +277,6 @@ class CarlaEnvironment():
             #     if self.checkpoint_frequency is not None:
             #         self.checkpoint_waypoint_index = (self.current_waypoint_index // self.checkpoint_frequency) * self.checkpoint_frequency
 
-            
             done = False
             reward = 0
 
@@ -316,7 +296,6 @@ class CarlaEnvironment():
                 #print("exceeded max velocity")
                 reward = -10
                 done = True
-
 
             centering_factor = max(1.0 - self.distance_from_center / self.max_distance_from_center, 0.0)
             angle_factor = max(1.0 - abs(self.angle / np.deg2rad(20)), 0.0)
@@ -384,10 +363,8 @@ class CarlaEnvironment():
             if self.display_on:
                 pygame.quit()
 
-
     def create_pedestrians(self):
         try:
-
 
             walker_spawn_points = []
             for i in range(NUMBER_OF_PEDESTRIAN):
@@ -516,7 +493,6 @@ class CarlaEnvironment():
         self.wrong_maneuver = None
 
 
-
 class CameraSensor():
 
     def __init__(self, vehicle):
@@ -553,7 +529,6 @@ class CameraSensor():
 class CameraSensorEnv:
 
     def __init__(self, vehicle):
-
         pygame.init()
         self.display = pygame.display.set_mode((500, 500),pygame.HWSURFACE | pygame.DOUBLEBUF)
         self.sensor_name = 'sensor.camera.rgb'
@@ -567,7 +542,6 @@ class CameraSensorEnv:
     # Third camera is setup and provide the visual observations for our environment.
 
     def _set_camera_sensor(self, world):
-
         thrid_person_camera_bp = world.get_blueprint_library().find(self.sensor_name)
         thrid_person_camera_bp.set_attribute('image_size_x', f'500')
         thrid_person_camera_bp.set_attribute('image_size_y', f'500')
@@ -618,13 +592,50 @@ class CollisionSensor:
         intensity = math.sqrt(impulse.x ** 2 + impulse.y ** 2 + impulse.z ** 2)
         self.collision_data.append(intensity)
 
+class ObsNormalizer:
+    def __init__(self, obs_dim, clip_value=10.0, epsilon=1e-8):
+        self.mean = np.zeros(obs_dim, dtype=np.float32)
+        self.var = np.ones(obs_dim, dtype=np.float32)
+        self.count = epsilon
+        self.clip_value = clip_value
+        self.epsilon = epsilon
+
+    def update(self, obs_batch):
+        obs_batch = np.array(obs_batch)
+        batch_mean = np.mean(obs_batch, axis=0)
+        batch_var = np.var(obs_batch, axis=0)
+        batch_count = obs_batch.shape
+
+        delta = batch_mean - self.mean
+        total = self.count + batch_count
+
+        new_mean = self.mean + delta * batch_count / total
+        m_a = self.var * self.count
+        m_b = batch_var * batch_count
+        M2 = m_a + m_b + np.square(delta) * self.count * batch_count / total
+        new_var = M2 / total
+
+        self.mean, self.var, self.count = new_mean, new_var, total
+
+    def normalize(self, obs):
+        normed = (obs - self.mean) / np.sqrt(self.var + self.epsilon)
+        return np.clip(normed, -self.clip_value, self.clip_value)
+
+    def save(self, path):
+        with open(path, "wb") as f:
+            pickle.dump({"mean": self.mean, "var": self.var, "count": self.count}, f)
+
+    def load(self, path):
+        with open(path, "rb") as f:
+            data = pickle.load(f)
+        self.mean, self.var, self.count = data["mean"], data["var"], data["count"]
+
 
 class EncodeState:
-    def __init__(self):
-        self.model_path = os.path.join(VAR_AUTO_MODEL_PATH,'var_auto_encoder_model') 
+    def __init__(self, normalizer=None, obs_dim=None, training=True):
+        self.model_path = os.path.join(VAR_AUTO_MODEL_PATH,'var_auto_encoder_model')
         self.model = tf.keras.models.load_model(self.model_path, compile=False)
-        self.model.trainable = False  
-
+        self.model.trainable = False
 
         for layer in self.model.layers:
             if isinstance(layer, tf.keras.layers.BatchNormalization):
@@ -634,39 +645,52 @@ class EncodeState:
         print(f'Variational AutoEncoder Loaded from {self.model_path}')
         print()
 
-    def process(self, observation):
-        image_obs = tf.convert_to_tensor(observation[0], dtype=tf.float32)
-        image_obs = tf.expand_dims(image_obs, axis=0)  
-        image_obs = self.model(image_obs, training=False)  
-        navigation_obs = tf.convert_to_tensor(observation[1], dtype=tf.float32)
-        observation = tf.concat([tf.reshape(image_obs, [-1]), navigation_obs], axis=-1)
+        # --- New Normalization Logic (your design) ---
+        self.training = training
+        self.normalizer = normalizer
+        if self.normalizer is None and obs_dim is not None:
+            self.normalizer = ObsNormalizer(obs_dim)
 
-        return observation
+    def process(self, observation):
+        image_data, nav_data = observation
+
+        image_tensor = tf.convert_to_tensor(image_data, dtype=tf.float32)
+        image_tensor = tf.expand_dims(image_tensor, axis=0)
+        latent_vec_tensor = self.model(image_tensor, training=False)
+
+        latent_vec_np = latent_vec_tensor.numpy().flatten()
+        nav_data_np = np.array(nav_data, dtype=np.float32)
+        combined_obs_np = np.concatenate([latent_vec_np, nav_data_np])
+
+        if self.normalizer is not None:
+            if self.training:
+                self.normalizer.update([combined_obs_np])
+            combined_obs_np = self.normalizer.normalize(combined_obs_np)
+
+        return tf.convert_to_tensor(combined_obs_np, dtype=tf.float32)
 
 
 class Buffer:
     def __init__(self):
-        self.observation = []  
-        self.actions = []         
-        self.log_probs = []     
-        self.rewards = []         
+        self.observation = []
+        self.actions = []
+        self.log_probs = []
+        self.rewards = []
         self.dones = []
 
     def clear(self):
-        del self.observation[:]    
-        del self.actions[:]        
-        del self.log_probs[:]      
+        del self.observation[:]
+        del self.actions[:]
+        del self.log_probs[:]
         del self.rewards[:]
         del self.dones[:]
-
-
 
 
 @tf.keras.utils.register_keras_serializable()
 class Actor(tf.keras.Model):
 
-    def __init__(self,name = 'ACTOR',**kwargs):
-        super().__init__(name = name ,**kwargs)
+    def __init__(self, name='ACTOR', **kwargs):
+        super().__init__(name=name, **kwargs)
 
         self.obs_dim = OBSERVATION_DIM
         self.action_dim = ACTION_DIM
@@ -677,18 +701,15 @@ class Actor(tf.keras.Model):
         # self.dense3 = layers.Dense(100, activation='tanh',kernel_initializer= 'glorot_uniform')
         # self.output_layer = layers.Dense(self.action_dim, activation='tanh',kernel_initializer= 'glorot_uniform')
 
-        
         self.dense1 = layers.Dense(500, activation='tanh')
         self.dense2 = layers.Dense(300, activation='tanh')
         self.dense3 = layers.Dense(100, activation='tanh')
         self.output_layer = layers.Dense(self.action_dim, activation='tanh')
 
     def call(self, obs):
-
         if isinstance(obs, np.ndarray):
             obs = tf.convert_to_tensor(obs, dtype=tf.float32)
 
-        
         obs = self.normalize(obs)
 
         x = self.dense1(obs)
@@ -699,18 +720,15 @@ class Actor(tf.keras.Model):
         return mean
 
     def normalize(self, obs):
-
         obs = tf.clip_by_value(obs, clip_value_min=-1e8, clip_value_max=1e8)
         return obs
-
-
 
 
 @tf.keras.utils.register_keras_serializable()
 class Critic(tf.keras.Model):
 
-    def __init__(self,name = 'CRITIC',**kwargs):
-        super().__init__(name = name ,**kwargs)
+    def __init__(self, name='CRITIC', **kwargs):
+        super().__init__(name=name, **kwargs)
 
         # self.dense1 = layers.Dense(500, activation='tanh',kernel_initializer= 'glorot_uniform')
         # self.dense2 = layers.Dense(300, activation='tanh',kernel_initializer= 'glorot_uniform')
@@ -722,9 +740,7 @@ class Critic(tf.keras.Model):
         self.dense3 = layers.Dense(100, activation='tanh')
         self.output_layer = layers.Dense(1)
 
-
     def call(self, obs):
-
         if isinstance(obs, np.ndarray):
             obs = tf.convert_to_tensor(obs, dtype=tf.float32)
 
@@ -736,29 +752,24 @@ class Critic(tf.keras.Model):
         value = self.output_layer(x)
 
         return value
-  
-    def normalize(self, obs):
 
+    def normalize(self, obs):
         obs = tf.clip_by_value(obs, clip_value_min=-1e8, clip_value_max=1e8)
         return obs
 
 
-
-
-
 @tf.keras.utils.register_keras_serializable()
 class PPOAgent(tf.keras.Model):
-    
 
     def __init__(self, name="PPOAgent", **kwargs):
         super().__init__(name=name, **kwargs)
-        
+
         self.obs_dim = OBSERVATION_DIM
         self.action_dim = ACTION_DIM
         self.action_std_init = ACTION_STD_INIT
         self.clip = POLICY_CLIP
         self.gamma = GAMMA
-        self.lam = LAMBDA  
+        self.lam = LAMBDA
         self.lr = LEARNING_RATE
         self.batch_size = BATCH_SIZE
         self.n_updates_per_iteration = NO_OF_ITERATIONS
@@ -771,8 +782,7 @@ class PPOAgent(tf.keras.Model):
         self.checkpoint_dir = CHECKPOINT_PATH
 
         self.log_std = tf.Variable(tf.fill((self.action_dim,), self.action_std_init), trainable=False, dtype=tf.float32)
-        #self.log_std = tf.Variable(tf.fill((self.action_dim,), tf.math.log(self.action_std_init)), trainable=False, dtype=tf.float32)
-
+        # self.log_std = tf.Variable(tf.fill((self.action_dim,), tf.math.log(self.action_std_init)), trainable=False, dtype=tf.float32)
 
         self.actor = Actor()
         self.critic = Critic()
@@ -783,19 +793,17 @@ class PPOAgent(tf.keras.Model):
         self.critic.compile(optimizer=self.optimizer)
         self.old_actor.compile(optimizer=self.optimizer)
         self.old_critic.compile(optimizer=self.optimizer)
-        
 
         self.update_old_policy()
 
-    
     def call(self, obs, train):
 
         if isinstance(obs, np.ndarray):
             obs = tf.convert_to_tensor(obs, dtype=tf.float32)
 
         if len(obs.shape) == 1:
-            obs = tf.expand_dims(obs, axis=0) 
-        
+            obs = tf.expand_dims(obs, axis=0)
+
         mean = self.old_actor(obs)
 
         if tf.reduce_any(tf.math.is_nan(mean)):
@@ -808,32 +816,29 @@ class PPOAgent(tf.keras.Model):
         if tf.reduce_any(tf.math.is_nan(value)):
             print("NaN detected in the value, exiting...")
             exit()
-        
+
         if train:
             self.memory.observation.append(obs)
             self.memory.actions.append(action)
             self.memory.log_probs.append(log_probs)
-        
-        return action.numpy().flatten(),mean.numpy().flatten()
 
+        return action.numpy().flatten(), mean.numpy().flatten()
 
     def update_old_policy(self):
         self.old_actor.set_weights(self.actor.get_weights())
         self.old_critic.set_weights(self.critic.get_weights())
-    
 
     def get_action_and_log_prob(self, mean):
 
-        std = tf.exp(self.log_std)  
-        #dist = tfd.MultivariateNormalDiag(loc=mean, scale_diag=std)
+        std = tf.exp(self.log_std)
+        # dist = tfd.MultivariateNormalDiag(loc=mean, scale_diag=std)
         dist = tfd.MultivariateNormalDiag(loc=mean, scale_diag=self.log_std)
 
-        #dist  = tfp.distributions.Normal(mean, tf.exp(self.log_std), validate_args=True)
+        # dist  = tfp.distributions.Normal(mean, tf.exp(self.log_std), validate_args=True)
         action = dist.sample()
         log_probs = dist.log_prob(action)
 
         return action, log_probs
-
 
     def compute_advantages(self, rewards, values, dones):
         advantages = []
@@ -844,10 +849,9 @@ class PPOAgent(tf.keras.Model):
             advantages.insert(0, gae)
 
         returns = advantages + values[:-1]
-        #returns = tf.convert_to_tensor(advantages, dtype=tf.float32) + values[:-1]
+        # returns = tf.convert_to_tensor(advantages, dtype=tf.float32) + values[:-1]
 
         return tf.convert_to_tensor(advantages, dtype=tf.float32), tf.convert_to_tensor(returns, dtype=tf.float32)
-
 
     def evaluate(self, obs, action):
 
@@ -857,17 +861,16 @@ class PPOAgent(tf.keras.Model):
             print("NaN detected in the mean, exiting...")
             exit()
 
-        std = tf.exp(self.log_std)  
-        #dist = tfd.MultivariateNormalDiag(loc=mean, scale_diag=std)
+        std = tf.exp(self.log_std)
+        # dist = tfd.MultivariateNormalDiag(loc=mean, scale_diag=std)
         dist = tfd.MultivariateNormalDiag(loc=mean, scale_diag=self.log_std)
 
-        #dist  = tfp.distributions.Normal(mean, tf.exp(self.log_std), validate_args=True)
+        # dist  = tfp.distributions.Normal(mean, tf.exp(self.log_std), validate_args=True)
         log_probs = dist.log_prob(action)
         entropy = dist.entropy()
         values = self.critic(obs)
 
         return log_probs, values, entropy
-
 
     def learn(self):
         print()
@@ -883,16 +886,15 @@ class PPOAgent(tf.keras.Model):
 
         advantages, returns = self.compute_advantages(rewards, values, dones)
         advantages = (advantages - tf.reduce_mean(advantages)) / (tf.math.reduce_std(advantages) + 1e-7)
-        returns = (returns - tf.reduce_mean(returns))/(tf.math.reduce_std(returns)+1e-7)
+        returns = (returns - tf.reduce_mean(returns)) / (tf.math.reduce_std(returns) + 1e-7)
         # tf.keras.layers.LayerNormalization()(advantages)
         # tf.keras.layers.LayerNormalization()(returns)
 
         for i in range(self.n_updates_per_iteration):
             with tf.GradientTape() as tape_a, tf.GradientTape() as tape_c:
-
                 log_probs, values, dist_entropy = self.evaluate(old_states, old_actions)
                 values = tf.squeeze(values)
-                #ratios = tf.exp(tf.clip_by_value(log_probs - old_logprobs, -10, 10))
+                # ratios = tf.exp(tf.clip_by_value(log_probs - old_logprobs, -10, 10))
                 ratios = tf.exp(log_probs - old_logprobs)
 
                 surr1 = ratios * advantages
@@ -901,24 +903,19 @@ class PPOAgent(tf.keras.Model):
                 actor_loss = -tf.reduce_mean(tf.minimum(surr1, surr2)) - 0.01 * tf.reduce_mean(dist_entropy)
                 critic_loss = 0.5 * self.loss(values, returns)
 
-
-            actor_vars = self.actor.trainable_variables #+ [self.log_std]  
+            actor_vars = self.actor.trainable_variables  # + [self.log_std]
             grads_a = tape_a.gradient(actor_loss, actor_vars)
             grads_c = tape_c.gradient(critic_loss, self.critic.trainable_variables)
-
 
             self.optimizer.apply_gradients(zip(grads_a, actor_vars))
             self.optimizer.apply_gradients(zip(grads_c, self.critic.trainable_variables))
 
-            #print(f" A_Loss = {actor_loss.numpy():.6f}, C_Loss = {critic_loss.numpy():.6f},Entropy: {tf.reduce_mean(dist_entropy).numpy():.6f},Adv: {tf.reduce_mean(advantages).numpy()}")
-
+            # print(f" A_Loss = {actor_loss.numpy():.6f}, C_Loss = {critic_loss.numpy():.6f},Entropy: {tf.reduce_mean(dist_entropy).numpy():.6f},Adv: {tf.reduce_mean(advantages).numpy()}")
 
         self.update_old_policy()
         self.memory.clear()
 
         print("\nUPDATED THE WEIGHTS\n")
-
-
 
     def save(self):
 
@@ -931,16 +928,14 @@ class PPOAgent(tf.keras.Model):
         log_std_path = os.path.join(self.models_dir, 'log_std.npy')
         np.save(log_std_path, self.log_std.numpy())
 
-
         print(f"Model weights are saved at {self.models_dir}")
 
-
-    def chkpt_save(self,episode,timestep,cumulative_score):
+    def chkpt_save(self, episode, timestep, cumulative_score):
 
         if not os.path.exists(self.checkpoint_dir):
             os.makedirs(self.checkpoint_dir)
 
-        checkpoint_file = os.path.join(self.checkpoint_dir ,'checkpoint.pickle')
+        checkpoint_file = os.path.join(self.checkpoint_dir, 'checkpoint.pickle')
 
         data = {
             'episode': episode,
@@ -954,7 +949,6 @@ class PPOAgent(tf.keras.Model):
         print(f"Checkpoint saved as {checkpoint_file}")
         print()
 
-
     def load(self):
 
         self.actor = tf.keras.models.load_model(self.models_dir + '/actor')
@@ -966,28 +960,25 @@ class PPOAgent(tf.keras.Model):
         # if os.path.exists(log_std_path):
         #     self.log_std.assign(np.load(log_std_path))
 
-        
-
         print(f"Model is  loaded from {self.models_dir}")
         print()
 
-
     def chkpt_load(self):
 
-        checkpoint_file = os.path.join(self.checkpoint_dir ,'checkpoint.pickle')
+        checkpoint_file = os.path.join(self.checkpoint_dir, 'checkpoint.pickle')
 
         with open(checkpoint_file, 'rb') as f:
             checkpoint_data = pickle.load(f)
-        
+
         episode = checkpoint_data['episode']
         timestep = checkpoint_data['timestep']
         cumulative_score = checkpoint_data['cumulative_score']
-        
+
         # if 'log_std' in checkpoint_data:
         #     self.log_std.assign(checkpoint_data['log_std'])
 
         print()
-        #print(f"Checkpoint loaded from {checkpoint_file} episode : {episode} , log_std = {self.log_std}")
+        # print(f"Checkpoint loaded from {checkpoint_file} episode : {episode} , log_std = {self.log_std}")
         print(f"Checkpoint loaded from {checkpoint_file} episode : {episode}")
 
         return episode, timestep, cumulative_score
@@ -998,9 +989,7 @@ class PPOAgent(tf.keras.Model):
         print()
 
 
-
 def train():
-
     timestep = 0
     episode = 0
     cumulative_score = 0
@@ -1023,7 +1012,6 @@ def train():
         ConnectionRefusedError
         print("CONNECTION HAS BEEN REFUSED BY THE SERVER.")
         print()
-   
 
     if not os.path.exists(LOG_PATH_TRAIN):
         os.makedirs(LOG_PATH_TRAIN)
@@ -1031,8 +1019,10 @@ def train():
     summary_writer = tf.summary.create_file_writer(LOG_PATH_TRAIN)
 
     env = CarlaEnvironment(client, world,TOWN)
-    encoder = EncodeState()
-    
+    normalizer = ObsNormalizer(obs_dim=OBSERVATION_DIM)
+    encoder = EncodeState(normalizer=normalizer, obs_dim=OBSERVATION_DIM, training=True)
+
+    CHECKPOINT_LOAD = False  # Comment this if not the first training run.
     if CHECKPOINT_LOAD:
         print()
         print('LOADING FROM CHECKPOINT....')
@@ -1041,11 +1031,15 @@ def train():
         episode , timestep , cumulative_score = agent.chkpt_load()
         agent.load()
         agent.prn()
+        normalizer_path = os.path.join(agent.models_dir, "obs_normalizer.pkl")
+        if os.path.exists(normalizer_path):
+            normalizer.load(normalizer_path)
+            print(f"Observation normalizer loaded from {normalizer_path}")
+        else:
+            print(
+                f"WARNING: Could not find normalizer state at {normalizer_path}. Starting with a fresh normalizer. This is expected if it's the first run after this code change.")
     else:
-
         agent = PPOAgent()
-
-
 
     while timestep < TRAIN_TIMESTEPS:
 
@@ -1060,7 +1054,6 @@ def train():
 
         for t in range(EPISODE_LENGTH): 
 
-
             observation = observation.numpy()
 
             action,_ = agent(observation,True)
@@ -1068,7 +1061,6 @@ def train():
             #print(f'action  = {action}')
             
             observation, reward, done, info = env.step(action)
-
 
             if observation is None:
                 break
@@ -1080,7 +1072,6 @@ def train():
 
             timestep +=1
             current_ep_reward += reward
-
 
             if done:
                 episode += 1
@@ -1104,9 +1095,7 @@ def train():
 
 
         if episode % 5 == 0:
-
             with summary_writer.as_default():
-                
                 tf.summary.scalar("Episodic Reward/episode", scores[-1], step=episode)
                 tf.summary.scalar("Cumulative Reward/info", cumulative_score, step=episode)
                 tf.summary.scalar("Cumulative Reward/(t)", cumulative_score, step=timestep)
@@ -1123,22 +1112,21 @@ def train():
                 deviation_from_center = 0
                 distance_covered = 0
 
-
         if episode % 5 == 0:
             agent.learn()
 
         if episode % 50 == 0:
             #agent.learn()
             agent.save()
-            agent.chkpt_save(episode,timestep,cumulative_score)
- 
+            agent.chkpt_save(episode, timestep, cumulative_score)
+            normalizer_path = os.path.join(agent.models_dir, "obs_normalizer.pkl")
+            normalizer.save(normalizer_path)
+            print(f"Observation normalizer saved to {normalizer_path}")
 
     sys.exit()
 
 
-
 def test():
-
     timestep = 0
     episode = 0
 
@@ -1157,23 +1145,27 @@ def test():
         ConnectionRefusedError
         print("CONNECTION HAS BEEN REFUSED BY THE SERVER.")
         print()
-   
 
     if not os.path.exists(LOG_PATH_TEST):
         os.makedirs(LOG_PATH_TEST)
     
     summary_writer = tf.summary.create_file_writer(LOG_PATH_TEST)
 
-    env = CarlaEnvironment(client, world,TOWN)
-    encoder = EncodeState()
-    
+    env = CarlaEnvironment(client, world, TOWN)
+
     agent = PPOAgent()
     agent.load()
     agent.prn()
 
+    normalizer = ObsNormalizer(obs_dim=OBSERVATION_DIM)
+    normalizer_path = os.path.join(agent.models_dir, "obs_normalizer.pkl")
+    normalizer.load(normalizer_path)
+    print(f"Observation normalizer loaded from {normalizer_path}")
+
+    encoder = EncodeState(normalizer=normalizer, obs_dim=OBSERVATION_DIM, training=False)
     print("TESTING.....")
 
-    while episode < TEST_EPISODES+1:
+    while episode < TEST_EPISODES + 1:
 
         observation = env.reset()
         observation = encoder.process(observation)
@@ -1184,10 +1176,10 @@ def test():
         distance_covered = 0
         t1 = datetime.now()
 
-        for t in range(EPISODE_LENGTH): 
+        for t in range(EPISODE_LENGTH):
 
             observation = observation.numpy()
-            action,_ = agent(observation,False)
+            action, _ = agent(observation, False)
             observation, reward, done, info = env.step(action)
 
             if observation is None:
@@ -1195,18 +1187,16 @@ def test():
 
             observation = encoder.process(observation)
 
-            timestep +=1
+            timestep += 1
             current_ep_reward += reward
 
             if done:
                 episode += 1
                 break
 
-
         deviation_from_center += info[1]
         distance_covered += info[0]
 
-        
         t2 = datetime.now()
         total_time = abs((t2-t1).total_seconds())
 
@@ -1220,14 +1210,10 @@ def test():
             tf.summary.scalar('Metrics/Distance Covered', info[0], step=episode)
             summary_writer.flush()  
 
-
-
-
     sys.exit()
 
 
 def capture_data():
-
     timestep = 0
     episode = 0
     cumulative_score = 0
@@ -1250,13 +1236,18 @@ def capture_data():
         ConnectionRefusedError
         print("CONNECTION HAS BEEN REFUSED BY THE SERVER.")
         print()
-   
 
-    env = CarlaEnvironment(client, world,TOWN)
-    encoder = EncodeState()
+    env = CarlaEnvironment(client, world, TOWN)
 
     agent = PPOAgent()
     agent.load()
+
+    normalizer = ObsNormalizer(obs_dim=OBSERVATION_DIM)
+    normalizer_path = os.path.join(agent.models_dir, "obs_normalizer.pkl")
+    normalizer.load(normalizer_path)
+    print(f"Observation normalizer loaded from {normalizer_path}")
+
+    encoder = EncodeState(normalizer=normalizer, obs_dim=OBSERVATION_DIM, training=False)
 
     folder_count = 1
 
@@ -1282,7 +1273,6 @@ def capture_data():
             
             writer.writerow(data_to_append)
 
-
         observation = env.reset()
 
         current_ep_reward = 0
@@ -1292,7 +1282,6 @@ def capture_data():
         for t in range(EPISODE_LENGTH):
             
             data_to_append = []
-
 
             image_array = np.array(observation[0], dtype=np.uint8)
             save_path = os.path.join(save_images_dir, f"frame_{frame_count}.png")
@@ -1309,7 +1298,7 @@ def capture_data():
 
             observation = encoder.process(observation)
             observation = observation.numpy()
-            action , mean = agent(observation,True)
+            action, mean = agent(observation, True)
             observation, reward, done, info = env.step(action)
 
             e_time = time.time()
@@ -1322,12 +1311,10 @@ def capture_data():
 
             data_to_append.append(reward)
 
-
             if observation is None:
                 break
 
             exe_time = (e_time-s_time)
-
 
             data_to_append.append(exe_time)
 
@@ -1365,8 +1352,6 @@ def capture_data():
     print("start over")    
     print("Terminating the run.")
     sys.exit()
-
-
 
 
 if __name__ == "__main__":
